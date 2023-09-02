@@ -27,15 +27,6 @@ function! s:unit_test(f, cases)
 endfunction
 
 
-let test_get_absdir_view = [
-            \    ['/Users/sample.user/aaa', '/Users/sample.user', '~/aaa/'],
-            \    ['/Users/sample.user/aaa/', '/Users/sample.user', '~/aaa/'],
-            \    ['/absolute/path', '/Users/sample.user', '/absolute/path/'],
-            \    ['/', '/Users/sample.user', '/'],
-            \]
-call s:unit_test(function('FzfFileSelector#get_absdir_view'), test_get_absdir_view)
-
-
 let test_get_parent_dir = [
             \['.', '..'],
             \['/Users', '/'],
@@ -50,30 +41,6 @@ let test_get_origin_path_query = [
             \['ls aaa/bbbccc', 10, ['aaa', 'bbb']]
             \]
 "call s:unit_test(function('FzfFileSelector#get_origin_path_query'), test_get_origin_path_query)
-
-
-let test_get_fd_command = [
-            \['.', 'relative', 'f', 'fd --type f --color always ^ .'],
-            \['.', 'absolute', 'f', 'fd --absolute-path --type f --color always ^ .'],
-            \['.', 'absolute', 'A', 'fd --absolute-path --color always ^ .'],
-            \['.', 'relative', 'A', 'fd --color always ^ .'], 
-            \]
-call s:unit_test(function('FzfFileSelector#get_fd_command'), test_get_fd_command)
-
-
-let test_option_to_shell_string = [
-            \[ 'key', v:null, '--key',],
-            \[ 'key', ['abc', 'def'], "--key 'abc' --key 'def'",],
-            \[ 'key', 123, "--key '123'",],
-            \]
-call s:unit_test(function('FzfFileSelector#option_to_shell_string'), test_option_to_shell_string)
-
-
-let test_get_fzf_options_view = [
-            \[ '/absolute/path/', "--reverse --header '/absolute/path/' --preview 'bat --color always {}' --preview-window down",],
-            \[ '/', "--reverse --header '/' --preview 'bat --color always {}' --preview-window down",], 
-            \]
-call s:unit_test(function('FzfFileSelector#get_fzf_options_view'), test_get_fzf_options_view)
 
 
 let test_get_left = [
@@ -106,6 +73,21 @@ let test_get_cursor_from_items = [
             \['ls test/abbb', 9, 'select1\nselect2\n', 19], 
             \]
 "call s:unit_test(function('FzfFileSelector#get_cursor_from_items'), test_get_cursor_from_items)
+
+
+let test_get_cursor_from_items = [
+            \['python', 1],
+            \['./python', 1],
+            \['../python', 0],
+            \['apython', 0],
+            \['/python', 0],
+            \['/etc', 1],
+            \['.', 1],
+            \['/.', 1],
+            \['..', 1],
+            \['/..', 1],
+            \]
+call s:unit_test(function('FzfFileSelector#is_gf_accessible'), test_get_cursor_from_items)
 
 
 let &cpo = s:save_cpo

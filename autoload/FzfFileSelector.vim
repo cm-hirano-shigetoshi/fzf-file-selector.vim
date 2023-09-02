@@ -48,5 +48,40 @@ function! FzfFileSelector#run(query)
     endif
 endfunction
 
+function! FzfFileSelector#is_gf_accessible(filename)
+    let path_dirs = split(&path, ",")
+    if a:filename[0] == "/"
+        let path_dirs = [""]
+    endif
+    for dir in path_dirs
+        if len(glob(dir . '/' . a:filename)) > 0
+            return 1
+        endif
+    endfor
+    return 0
+endfunction
+
+function! FzfFileSelector#gf(query)
+    if has('nvim')
+        if FzfFileSelector#is_gf_accessible(a:query)
+            call feedkeys("gf", "n")
+        else
+            let g:fzf_layout = { 'window': 'enew' }
+
+            let server_port = FzfFileSelector#start_server()
+
+            let command_str = system([s:PYTHON, s:PLUGIN_DIR . "/python/create_fzf_command.py", ".", a:query, server_port])
+            let command_json = json_decode(command_str)
+
+            let fd_command = command_json["fd_command"]
+            let fzf_dict = command_json["fzf_dict"]
+            let fzf_port = command_json["fzf_port"]
+            call system([s:CURL, "localhost:" . server_port . "?set_fzf_port=" . fzf_port])
+            call FzfFileSelector#get_selected_items(fd_command, fzf_dict, fzf_port)
+        endif
+    else
+    endif
+endfunction
+
 let &cpo = s:save_cpo
 unlet s:save_cpo
