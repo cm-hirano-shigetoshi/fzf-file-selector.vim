@@ -16,6 +16,7 @@ fzf_port_ = -1
 search_origins = []
 path_notation_ = "relative"
 entity_type_ = "f"
+file_filter_ = "default"
 
 
 def set_fzf_port(fzf_port):
@@ -24,14 +25,16 @@ def set_fzf_port(fzf_port):
     return True
 
 
-def get_fd_command(d, path_notation=None, entity_type=None):
+def get_fd_command(d, path_notation=None, entity_type=None, file_filter=None):
     path_notation = path_notation if path_notation else path_notation_
     entity_type = entity_type if entity_type else entity_type_
+    file_filter = file_filter if file_filter else file_filter_
 
     commands = []
     commands.append(FD)
     commands.append(get_path_notation_option(path_notation))
     commands.append(get_entity_type_option(entity_type))
+    commands.append(get_file_filter_option(file_filter))
     commands.append("--color always")
     commands.append("^")
     commands.append(d)
@@ -45,6 +48,14 @@ def get_entity_type_option(entity_type):
         return ""
     else:
         return f"--type {entity_type}"
+
+
+def get_file_filter_option(file_filter):
+    assert file_filter in ("default", "no-ignore", "hidden", "unrestricted")
+    if file_filter == "default":
+        return ""
+    else:
+        return f"--{file_filter}"
 
 
 def get_parent_dir(d):
@@ -82,6 +93,11 @@ def update_entity_type(entity_type):
     entity_type_ = entity_type
 
 
+def update_file_filter(file_filter):
+    global file_filter_
+    file_filter_ = file_filter
+
+
 def update_search_origins(move):
     if move == "up":
         if os.path.abspath(search_origins[-1]) != "/":
@@ -100,6 +116,10 @@ def get_origin_move_command(d):
 
 def get_entity_type_command(entity_type):
     return f"reload({get_fd_command(search_origins[-1], entity_type=entity_type)})"
+
+
+def get_file_filter_command(file_filter):
+    return f"reload({get_fd_command(search_origins[-1], file_filter=file_filter)})"
 
 
 def get_path_notation_command(path_notation):
@@ -124,6 +144,11 @@ def request_to_fzf(params):
             entity_type = params["entity_type"][0]
             update_entity_type(entity_type)
             command = get_entity_type_command(entity_type)
+            post_to_localhost(get_fzf_api_url(), data=command)
+        elif "file_filter" in params:
+            file_filter = params["file_filter"][0]
+            update_file_filter(file_filter)
+            command = get_file_filter_command(file_filter)
             post_to_localhost(get_fzf_api_url(), data=command)
         return True
     except Exception as e:
@@ -150,13 +175,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 class ThreadedHTTPServer(threading.Thread):
     def bind_socket(self):
-        for port in range(49152, 65536):
-            try:
-                self.httpd = HTTPServer(("", port), RequestHandler)
-                return port
-            except Exception:
-                pass
-        raise ValueError("No available port")
+        self.httpd = HTTPServer(("", 0), RequestHandler)
+        return self.httpd.server_port
 
     def run(self):
         self.httpd.serve_forever()
@@ -179,6 +199,7 @@ def run_as_thread(origin_path):
     search_origins.append(origin_path)
     update_path_notation("relative")
     update_entity_type("f")
+    update_file_filter("default")
 
     return port
 
@@ -187,6 +208,7 @@ def run(origin_path, server_port):
     search_origins.append(origin_path)
     update_path_notation("relative")
     update_entity_type("f")
+    update_file_filter("default")
 
     HTTPServer(("", int(server_port)), RequestHandler).serve_forever()
 

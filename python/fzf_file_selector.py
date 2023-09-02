@@ -73,7 +73,7 @@ def get_cursor_from_items(b, c, items):
 def main(args):
     org_buffer, org_cursor = args[1], int(args[2])
     origin_path, query = get_origin_path_query(org_buffer, org_cursor)
-    port = internal_server.run(origin_path)
+    port = internal_server.run_as_thread(origin_path)
     fd_command, fzf_dict, fzf_port = create_fzf_command.run(origin_path, query, port)
     internal_server.set_fzf_port(fzf_port)
     items = get_selected_items(fd_command, fzf_dict, fzf_port)
