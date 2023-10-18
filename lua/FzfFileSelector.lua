@@ -39,19 +39,34 @@ local function join(list, sep)
     return res
 end
 
+local function get_available_port()
+    local socket = require('socket')
+    local server = assert(socket.bind('*', 0))
+    local _, port = server:getsockname()
+    server:close()
+    return port
+end
+
+local function spawn(process, args)
+    local posix = require("posix")
+    local pid, err = posix.fork()  -- プロセスを分岐させる
+    if pid == nil then             -- もしエラーがある場合
+        print("エラー", err)
+        os.exit(1)                 -- exit
+    elseif pid == 0 then           -- 子プロセスの場合
+        posix.getpid('pid')        -- 子プロセスのPIDを取得
+        posix.execp(process, args) -- 命令を実行
+        os.exit(1)                 -- 終了
+    end
+    return pid                     -- 親プロセスは子プロセスのPIDを返す
+end
+
 local function start_server()
     if SERVER_PID >= 0 then
         os.execute("kill " .. SERVER_PID)
     end
-    local cmd = join({ PYTHON, PLUGIN_DIR .. "/python/find_available_port.py" }, " ")
-    local handle = assert(io.popen(cmd))
-    local server_port = tonumber(handle:read("*a"))
-    handle:close()
-    local _, pid = vim.loop.spawn(PYTHON, {
-        args = { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port },
-        stdio = { stdout, stderr } -- stdout, stderrといったオプション設定
-    }, function()
-    end)
+    local server_port = get_available_port()
+    local pid = spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port })
     SERVER_PID = pid
     return server_port
 end
@@ -87,11 +102,11 @@ local function dump_buffers(dirname)
 end
 
 local function execute_fzf(fd_command, fzf_dict, fzf_port)
-    fzf_dict["options"] = "--listen " .. fzf_port .. " " .. fzf_dict["options"]
+    local options = "--listen " .. fzf_port .. " " .. fzf_dict["options"]
     coroutine.wrap(function(fd_command, options)
         local result = fzf.fzf(fd_command, options)
         vim.api.nvim_command("next " .. join(result, " "))
-    end)(fd_command, fzf_dict["options"])
+    end)(fd_command, options)
 end
 
 M.run = function(a_query)
@@ -99,6 +114,8 @@ M.run = function(a_query)
         vim.api.nvim_feedkeys("gf", "n", {})
     else
         vim.api.nvim_set_var("fzf_layout", { window = 'enew' })
+
+        --local debug = io.open("/tmp/aaa", "a"); debug:write("=== B01 ===" .. "\n"); debug:close();
 
         local server_port = start_server()
         local cmd_list = { PYTHON, PLUGIN_DIR .. "/python/create_fzf_command.py", ".", a_query, server_port }
