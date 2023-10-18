@@ -78,6 +78,7 @@ local function execute_fzf(fd_command, fzf_dict, fzf_port)
     local options = "--listen " .. fzf_port .. " " .. fzf_dict["options"]
     coroutine.wrap(function(fd_command, options)
         local result = fzf.fzf(fd_command, options)
+        os.execute("kill " .. SERVER_PID)
         vim.api.nvim_command("next " .. utils.join(result, " "))
     end)(fd_command, options)
 end
