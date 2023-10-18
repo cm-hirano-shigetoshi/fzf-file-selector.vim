@@ -1,4 +1,5 @@
 local M = {}
+local utils = require("utils")
 local fzf = require("fzf")
 local dkjson = require "dkjson"
 
@@ -19,34 +20,6 @@ local function print_table(t, file)
     end
 end
 
-local function split(inputstr, sep)
-    if sep == nil then
-        sep = "%s"
-    end
-    local t = {}
-    for str in string.gmatch(inputstr, "([^" .. sep .. "]+)") do
-        table.insert(t, str)
-    end
-    return t
-end
-
-local function join(list, sep)
-    local res = ""
-    for i, v in ipairs(list) do
-        arg = tostring(v)
-        res = res .. (i > 1 and sep or "") .. (#arg > 0 and arg or '""')
-    end
-    return res
-end
-
-local function get_available_port()
-    local socket = require('socket')
-    local server = assert(socket.bind('*', 0))
-    local _, port = server:getsockname()
-    server:close()
-    return port
-end
-
 local function spawn(process, args)
     local posix = require("posix")
     local pid, err = posix.fork()  -- プロセスを分岐させる
@@ -65,7 +38,7 @@ local function start_server()
     if SERVER_PID >= 0 then
         os.execute("kill " .. SERVER_PID)
     end
-    local server_port = get_available_port()
+    local server_port = utils.get_available_port()
     local pid = spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port })
     SERVER_PID = pid
     return server_port
@@ -105,7 +78,7 @@ local function execute_fzf(fd_command, fzf_dict, fzf_port)
     local options = "--listen " .. fzf_port .. " " .. fzf_dict["options"]
     coroutine.wrap(function(fd_command, options)
         local result = fzf.fzf(fd_command, options)
-        vim.api.nvim_command("next " .. join(result, " "))
+        vim.api.nvim_command("next " .. utils.join(result, " "))
     end)(fd_command, options)
 end
 
@@ -119,7 +92,7 @@ M.run = function(a_query)
 
         local server_port = start_server()
         local cmd_list = { PYTHON, PLUGIN_DIR .. "/python/create_fzf_command.py", ".", a_query, server_port }
-        local cmd = join(cmd_list, " ")
+        local cmd = utils.join(cmd_list, " ")
         local handle = assert(io.popen(cmd))
         local command_str = handle:read("*a")
         handle:close()
@@ -128,7 +101,8 @@ M.run = function(a_query)
         local fd_command = command_json["fd_command"]
         local fzf_dict = command_json["fzf_dict"]
         local fzf_port = command_json["fzf_port"]
-        os.execute(join({ CURL, "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port, ">/dev/null 2>&1" }, " "))
+        os.execute(utils.join({ CURL, "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port, ">/dev/null 2>&1" },
+            " "))
         execute_fzf(fd_command, fzf_dict, fzf_port)
     end
 end
