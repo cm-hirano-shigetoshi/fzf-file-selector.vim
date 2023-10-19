@@ -133,7 +133,7 @@ local function get_fd_command(d, path_notation, entity_type, file_filter)
 end
 
 local function option_to_shell_string(key, value)
-    if value == nil then
+    if value == true then
         return "--" .. key
     elseif utils.is_array(value) then
         local strs = {}
@@ -150,7 +150,6 @@ end
 
 
 local function options_to_shell_string(options)
-    --return [option_to_shell_string(k, v) for k, v in options.items()]
     local arr = {}
     for k, v in pairs(options) do
         table.insert(arr, option_to_shell_string(k, v))
@@ -160,8 +159,8 @@ end
 
 local function get_fzf_options_core(d, query, server_port)
     local options = {
-        multi = nil,
-        ansi = nil,
+        multi = true,
+        ansi = true,
         query = query,
         bind = {
             'alt-u:execute-silent(curl "http://localhost:' .. server_port .. '?origin_move=up")',
@@ -181,7 +180,7 @@ local function get_fzf_options_core(d, query, server_port)
 end
 
 local function get_fzf_options_view(abs_dir)
-    return ("--ansi --reverse --header '%s' --preview 'bat --color always {}' --preview-window down"):format(abs_dir)
+    return ("--reverse --header '%s' --preview 'bat --color always {}' --preview-window down"):format(abs_dir)
 end
 
 local function get_fzf_options(d, query, server_port)
@@ -224,15 +223,15 @@ M.run = function(a_query)
     else
         vim.api.nvim_set_var("fzf_layout", { window = 'enew' })
 
-        --local debug = io.open("/tmp/aaa", "a"); debug:write("=== B01 ===" .. "\n"); debug:close();
-
         local server_port = start_server()
         local command_json = get_command_json(".", a_query, server_port)
 
         local fd_command = command_json["fd_command"]
         local fzf_dict = command_json["fzf_dict"]
         local fzf_port = command_json["fzf_port"]
-        os.execute(utils.join({ CURL, "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port, ">/dev/null 2>&1" },
+        os.execute(utils.join({ CURL,
+                "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port,
+                ">/dev/null 2>&1" },
             " "))
         execute_fzf(fd_command, fzf_dict, fzf_port)
     end

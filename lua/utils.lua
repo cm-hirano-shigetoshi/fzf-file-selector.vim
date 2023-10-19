@@ -33,7 +33,7 @@ function M.get_absdir_view(p, home_dir)
     home_dir = home_dir or os.getenv("HOME")
     local abs_dir = posix.realpath(p)
     if string.sub(abs_dir, 1, #home_dir) == home_dir then
-        abs_dir = "~" .. string.sub(abs_dir, #home_dir)
+        abs_dir = "~" .. string.sub(abs_dir, #home_dir + 1)
     end
     if abs_dir ~= "/" then
         abs_dir = abs_dir .. "/"
