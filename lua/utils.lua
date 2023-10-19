@@ -1,4 +1,6 @@
 local M = {}
+local posix = require("posix")
+local socket = require('socket')
 
 function M.split(inputstr, sep)
     if sep == nil then
@@ -21,11 +23,32 @@ function M.join(list, sep)
 end
 
 function M.get_available_port()
-    local socket = require('socket')
     local server = assert(socket.bind('*', 0))
     local _, port = server:getsockname()
     server:close()
     return port
+end
+
+function M.get_absdir_view(p, home_dir)
+    home_dir = home_dir or os.getenv("HOME")
+    local abs_dir = posix.realpath(p)
+    if string.sub(abs_dir, 1, #home_dir) == home_dir then
+        abs_dir = "~" .. string.sub(abs_dir, #home_dir)
+    end
+    if abs_dir ~= "/" then
+        abs_dir = abs_dir .. "/"
+    end
+    return abs_dir
+end
+
+function M.is_array(x)
+    if type(x) ~= 'table' then return false end
+    local i = 0
+    for _ in pairs(x) do
+        i = i + 1
+        if x[i] == nil then return false end
+    end
+    return true
 end
 
 return M

@@ -1,4 +1,4 @@
-local utils = require('utils')
+local utils = require('../lua/utils')
 
 describe('utils', function()
     it('split', function()
