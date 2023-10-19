@@ -20,9 +20,9 @@ function M.get_available_port()
     return port
 end
 
-function M.get_absdir_view(p, home_dir)
+function M.get_absdir_view(path, home_dir)
     home_dir = home_dir or os.getenv("HOME")
-    local abs_dir = posix.realpath(p)
+    local abs_dir = posix.realpath(path)
     if string.sub(abs_dir, 1, #home_dir) == home_dir then
         abs_dir = "~" .. string.sub(abs_dir, #home_dir + 1)
     end
