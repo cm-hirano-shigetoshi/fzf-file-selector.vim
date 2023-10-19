@@ -141,7 +141,7 @@ local function option_to_shell_string(key, value)
             --assert "'" not in str(v), f"Invalid option was specified: {v}"
             table.insert(strs, "--" .. key .. " '" .. v .. "'")
         end
-        return utils.join(strs, " ")
+        return table.concat(strs, " ")
     else
         --assert "'" not in str(value), f"Invalid option was specified: {value}"
         return "--" .. key .. " '" .. value .. "'"
@@ -176,7 +176,7 @@ local function get_fzf_options_core(d, query, server_port)
             'alt-l:execute-silent(curl "http://localhost:' .. server_port .. '?file_filter=unrestricted")',
         },
     }
-    return utils.join(options_to_shell_string(options), " ")
+    return table.concat(options_to_shell_string(options), " ")
 end
 
 local function get_fzf_options_view(abs_dir)
@@ -185,7 +185,7 @@ end
 
 local function get_fzf_options(d, query, server_port)
     local abs_dir = utils.get_absdir_view(d)
-    return utils.join({ get_fzf_options_core(d, query, server_port), get_fzf_options_view(abs_dir), }, " ")
+    return table.concat({ get_fzf_options_core(d, query, server_port), get_fzf_options_view(abs_dir), }, " ")
 end
 
 
@@ -200,7 +200,7 @@ local function get_command_json(origin, a_query, server_port)
     return { fd_command = fd_command, fzf_dict = fzf_dict, fzf_port = fzf_port }
     --[[
     local cmd_list = { PYTHON, PLUGIN_DIR .. "/python/create_fzf_command.py", origin, a_query, server_port }
-    local cmd = utils.join(cmd_list, " ")
+    local cmd = table.concat(cmd_list, " ")
     local handle = assert(io.popen(cmd))
     local command_str = handle:read("*a")
     handle:close()
@@ -213,7 +213,7 @@ local function execute_fzf(fd_command, fzf_dict, fzf_port)
     coroutine.wrap(function(fd_command, options)
         local result = fzf.fzf(fd_command, options)
         os.execute("kill " .. SERVER_PID)
-        vim.api.nvim_command("next " .. utils.join(result, " "))
+        vim.api.nvim_command("next " .. table.concat(result, " "))
     end)(fd_command, options)
 end
 
@@ -229,7 +229,7 @@ M.run = function(a_query)
         local fd_command = command_json["fd_command"]
         local fzf_dict = command_json["fzf_dict"]
         local fzf_port = command_json["fzf_port"]
-        os.execute(utils.join({ CURL,
+        os.execute(table.concat({ CURL,
                 "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port,
                 ">/dev/null 2>&1" },
             " "))
