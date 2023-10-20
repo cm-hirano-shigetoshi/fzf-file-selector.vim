@@ -128,7 +128,8 @@ local function get_fzf_options_core(query, server_port)
 end
 
 local function get_fzf_options_view(abs_dir)
-    return ("--reverse --header '%s' --preview 'bat --color always {}' --preview-window down"):format(abs_dir)
+    return ("--reverse --header '%s' --preview 'bat --plain --number --color always {}' --preview-window down"):format(
+    abs_dir)
 end
 
 local function get_fzf_options(d, query, server_port)
