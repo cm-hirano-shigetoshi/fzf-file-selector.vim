@@ -7,8 +7,7 @@ let g:load_FzfFileSelector = 1
 let s:save_cpo = &cpo
 set cpo&vim
 
-"nnoremap <silent> <Plug>fzf-file-selector :<C-u>call FzfFileSelector#run("")<CR>
-nnoremap <silent> gf :<C-u>call FzfFileSelector#gf(expand('<cfile>'))<CR>
+nnoremap <silent> gf :lua require('FzfFileSelector').gf(vim.fn.expand('<cfile>'))<cr>
 nnoremap <silent> <Plug>fzf-file-selector :lua require('FzfFileSelector').run("")<cr>
 
 

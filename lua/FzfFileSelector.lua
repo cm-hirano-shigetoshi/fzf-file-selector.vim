@@ -129,7 +129,7 @@ end
 
 local function get_fzf_options_view(abs_dir)
     return ("--reverse --header '%s' --preview 'bat --plain --number --color always {}' --preview-window down"):format(
-    abs_dir)
+        abs_dir)
 end
 
 local function get_fzf_options(d, query, server_port)
@@ -157,22 +157,43 @@ local function execute_fzf(fd_command_, fzf_dict, fzf_port)
     end)(fd_command_, options_)
 end
 
+local function call(a_query)
+    vim.api.nvim_set_var("fzf_layout", { window = 'enew' })
+
+    local server_port, fzf_port = start_server()
+    local command_json = get_command_json(".", a_query, server_port)
+
+    local fd_command = command_json["fd_command"]
+    local fzf_dict = command_json["fzf_dict"]
+    os.execute(table.concat({ CURL,
+            "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port,
+            ">/dev/null 2>&1" },
+        " "))
+    execute_fzf(fd_command, fzf_dict, fzf_port)
+end
+
 M.run = function(a_query)
-    if false then
+    call(a_query)
+end
+
+local function is_gf_accessible(filename)
+    local path_dirs = vim.opt.path:get()
+    if filename:sub(1, 1) == "/" then
+        path_dirs = { "" }
+    end
+    for _, dir in ipairs(path_dirs) do
+        if #vim.fn.glob(dir .. '/' .. filename) > 0 then
+            return true
+        end
+    end
+    return false
+end
+
+M.gf = function(a_query)
+    if is_gf_accessible(a_query) then
         vim.api.nvim_feedkeys("gf", "n", {})
     else
-        vim.api.nvim_set_var("fzf_layout", { window = 'enew' })
-
-        local server_port, fzf_port = start_server()
-        local command_json = get_command_json(".", a_query, server_port)
-
-        local fd_command = command_json["fd_command"]
-        local fzf_dict = command_json["fzf_dict"]
-        os.execute(table.concat({ CURL,
-                "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port,
-                ">/dev/null 2>&1" },
-            " "))
-        execute_fzf(fd_command, fzf_dict, fzf_port)
+        call(a_query .. " ")
     end
 end
 
