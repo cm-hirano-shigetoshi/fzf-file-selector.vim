@@ -1,7 +1,6 @@
 local M = {}
 local utils = require("utils")
 local fzf = require("fzf")
-local posix = require("posix")
 
 require("fzf").default_options = {
     window_on_create = function()
@@ -11,69 +10,22 @@ require("fzf").default_options = {
 
 SERVER_PID = -1
 PYTHON = "python"
-PLUGIN_DIR = os.getenv("HOME") .. "/.local/share/nvim/site/pack/packer/start/fzf-file-selector.vim"
+PLUGIN_DIR = debug.getinfo(1).source:sub(2):match('^(.*)/lua/[^/]+$')
 CURL = "curl"
 FD = "fd"
 
 
-local function print_table(t, file)
-    for k, v in pairs(t) do
-        file:write(k .. " = '" .. tostring(v) .. "'")
-    end
-end
-
-local function spawn(process, args)
-    local pid, err = posix.fork()  -- プロセスを分岐させる
-    if pid == nil then             -- もしエラーがある場合
-        print("エラー", err)
-        os.exit(1)                 -- exit
-    elseif pid == 0 then           -- 子プロセスの場合
-        posix.getpid('pid')        -- 子プロセスのPIDを取得
-        posix.execp(process, args) -- 命令を実行
-        os.exit(1)                 -- 終了
-    end
-    return pid                     -- 親プロセスは子プロセスのPIDを返す
-end
-
-local function start_server(fzf_port)
+local function start_server()
     if SERVER_PID > 0 then
         os.execute("kill " .. SERVER_PID)
     end
-    local server_port = utils.get_available_port()
-    assert(server_port ~= fzf_port)
-    local pid = spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port, fzf_port })
+    local s_server = utils.create_server()
+    local f_server = utils.create_server()
+    local _, server_port = s_server:getsockname(); s_server:close()
+    local _, fzf_port = f_server:getsockname(); f_server:close()
+    local pid = utils.spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port, fzf_port })
     SERVER_PID = pid
-    return server_port
-end
-
-local function get_buf_name(buf)
-    local fullpath = vim.api.nvim_buf_get_name(buf)
-    if string.len(fullpath) > 0 then
-        return vim.fn.fnamemodify(fullpath, ":~:.")
-    else
-        return nil
-    end
-end
-
-local function dump_buffers(dirname)
-    os.execute("rm -fr " .. dirname)
-    for buf = 1, vim.fn.bufnr("$") do
-        local buf_name = get_buf_name(buf)
-        if buf_name then
-            local filepath = dirname .. "/" .. buf .. ":" .. buf_name
-            os.execute("mkdir -p " .. filepath:match("(.*/)"))
-            if vim.api.nvim_buf_is_loaded(buf) then
-                local file = assert(io.open(filepath, "w"))
-                local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-                for _, line in ipairs(lines) do
-                    file:write(line .. "\n")
-                end
-                file:close()
-            else
-                os.execute("ln -s " .. vim.api.nvim_buf_get_name(buf) .. " " .. filepath)
-            end
-        end
-    end
+    return server_port, fzf_port
 end
 
 local function get_path_notation_option(path_notation)
@@ -153,7 +105,7 @@ local function options_to_shell_string(options)
     return arr
 end
 
-local function get_fzf_options_core(d, query, server_port)
+local function get_fzf_options_core(query, server_port)
     local options = {
         multi = true,
         ansi = true,
@@ -181,7 +133,7 @@ end
 
 local function get_fzf_options(d, query, server_port)
     local abs_dir = utils.get_absdir_view(d)
-    return table.concat({ get_fzf_options_core(d, query, server_port), get_fzf_options_view(abs_dir), }, " ")
+    return table.concat({ get_fzf_options_core(query, server_port), get_fzf_options_view(abs_dir), }, " ")
 end
 
 
@@ -195,13 +147,13 @@ local function get_command_json(origin, a_query, server_port)
     return { fd_command = fd_command, fzf_dict = fzf_dict }
 end
 
-local function execute_fzf(fd_command, fzf_dict, fzf_port)
-    local options = "--listen " .. fzf_port .. " " .. fzf_dict["options"]
+local function execute_fzf(fd_command_, fzf_dict, fzf_port)
+    local options_ = "--listen " .. fzf_port .. " " .. fzf_dict["options"]
     coroutine.wrap(function(fd_command, options)
         local result = fzf.fzf(fd_command, options)
         os.execute("kill " .. SERVER_PID)
         vim.api.nvim_command("next " .. table.concat(result, " "))
-    end)(fd_command, options)
+    end)(fd_command_, options_)
 end
 
 M.run = function(a_query)
@@ -210,8 +162,7 @@ M.run = function(a_query)
     else
         vim.api.nvim_set_var("fzf_layout", { window = 'enew' })
 
-        local fzf_port = utils.get_available_port()
-        local server_port = start_server(fzf_port)
+        local server_port, fzf_port = start_server()
         local command_json = get_command_json(".", a_query, server_port)
 
         local fd_command = command_json["fd_command"]
