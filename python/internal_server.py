@@ -204,11 +204,12 @@ def run_as_thread(origin_path):
     return port
 
 
-def run(origin_path, server_port):
+def run(origin_path, server_port, fzf_port):
     search_origins.append(origin_path)
     update_path_notation("relative")
     update_entity_type("f")
     update_file_filter("default")
+    set_fzf_port(fzf_port)
 
     HTTPServer(("", int(server_port)), RequestHandler).serve_forever()
 
