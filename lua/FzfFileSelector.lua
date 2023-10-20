@@ -15,11 +15,6 @@ PLUGIN_DIR = os.getenv("HOME") .. "/.local/share/nvim/site/pack/packer/start/fzf
 CURL = "curl"
 FD = "fd"
 
-search_origins = {}
-path_notation_ = "relative"
-entity_type_ = "f"
-file_filter_ = "default"
-
 
 local function print_table(t, file)
     for k, v in pairs(t) do
@@ -110,9 +105,9 @@ end
 
 
 local function get_fd_command(d, path_notation, entity_type, file_filter)
-    path_notation = path_notation or path_notation_
-    entity_type = entity_type or entity_type_
-    file_filter = file_filter or file_filter_
+    path_notation = path_notation or "relative"
+    entity_type = entity_type or "f"
+    file_filter = file_filter or "default"
 
     local commands = {}
     table.insert(commands, FD)
