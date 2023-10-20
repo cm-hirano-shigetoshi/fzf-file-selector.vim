@@ -11,7 +11,7 @@ require("fzf").default_options = {
 
 SERVER_PID = -1
 PYTHON = "python"
-PLUGIN_DIR = "."
+PLUGIN_DIR = os.getenv("HOME") .. "/.local/share/nvim/site/pack/packer/start/fzf-file-selector.vim"
 CURL = "curl"
 FD = "fd"
 
@@ -40,12 +40,13 @@ local function spawn(process, args)
     return pid                     -- 親プロセスは子プロセスのPIDを返す
 end
 
-local function start_server()
-    if SERVER_PID >= 0 then
+local function start_server(fzf_port)
+    if SERVER_PID > 0 then
         os.execute("kill " .. SERVER_PID)
     end
     local server_port = utils.get_available_port()
-    local pid = spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port })
+    assert(server_port ~= fzf_port)
+    local pid = spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port, fzf_port })
     SERVER_PID = pid
     return server_port
 end
@@ -196,16 +197,7 @@ end
 local function get_command_json(origin, a_query, server_port)
     local fd_command = get_fd_command(origin)
     local fzf_dict = get_fzf_dict(origin, a_query, server_port)
-    local fzf_port = utils.get_available_port()
-    return { fd_command = fd_command, fzf_dict = fzf_dict, fzf_port = fzf_port }
-    --[[
-    local cmd_list = { PYTHON, PLUGIN_DIR .. "/python/create_fzf_command.py", origin, a_query, server_port }
-    local cmd = table.concat(cmd_list, " ")
-    local handle = assert(io.popen(cmd))
-    local command_str = handle:read("*a")
-    handle:close()
-    return dkjson.decode(command_str)
-    ]]
+    return { fd_command = fd_command, fzf_dict = fzf_dict }
 end
 
 local function execute_fzf(fd_command, fzf_dict, fzf_port)
@@ -223,12 +215,12 @@ M.run = function(a_query)
     else
         vim.api.nvim_set_var("fzf_layout", { window = 'enew' })
 
-        local server_port = start_server()
+        local fzf_port = utils.get_available_port()
+        local server_port = start_server(fzf_port)
         local command_json = get_command_json(".", a_query, server_port)
 
         local fd_command = command_json["fd_command"]
         local fzf_dict = command_json["fzf_dict"]
-        local fzf_port = command_json["fzf_port"]
         os.execute(table.concat({ CURL,
                 "localhost:" .. server_port .. "?set_fzf_port=" .. fzf_port,
                 ">/dev/null 2>&1" },
