@@ -14,6 +14,40 @@ PLUGIN_DIR = debug.getinfo(1).source:sub(2):match('^(.*)/lua/[^/]+$')
 CURL = "curl"
 FD = "fd"
 
+local uv = vim.loop
+
+local function ss()
+    -- 新しいTCPオブジェクトを作成
+    local server = uv.new_tcp()
+
+    server:bind("127.0.0.1", 8086)
+
+    server:listen(128, function(err)
+        if err then
+            error("Listen error: " .. err)
+        end
+
+        -- 新しいTCPオブジェクトを作成
+        -- incoming connectionsに使用する
+        local client = uv.new_tcp()
+        server:accept(client)
+
+        -- クライアントからの情報を非同期で読み込む
+        -- レスポンスを書き込まないと、即座にクライアントを閉じる
+        client:read_start(function(err, chunk)
+            if err then
+                error("Read error: " .. err)
+            end
+            -- chunk（データ）がnilの場合、クライアントがクローズしている
+            if chunk then
+                -- 非同期なので、レスポンスを書き込んだらすぐに終了
+                client:write("HTTP/1.1 200 OK\nContent-Length: 12\n\naaaHello World!")
+                client:close()
+            end
+        end)
+    end)
+end
+
 
 local function start_server()
     if SERVER_PID > 0 then
@@ -23,8 +57,12 @@ local function start_server()
     local f_server = utils.create_server()
     local _, server_port = s_server:getsockname(); s_server:close()
     local _, fzf_port = f_server:getsockname(); f_server:close()
-    local pid = utils.spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port, fzf_port })
-    SERVER_PID = pid
+    --local pid = utils.spawn(PYTHON, { PLUGIN_DIR .. "/python/internal_server.py", ".", server_port, fzf_port })
+
+    ss()
+
+    --SERVER_PID = pid
+    SERVER_PID = 12345
     return server_port, fzf_port
 end
 
