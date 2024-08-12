@@ -172,8 +172,13 @@ local function call(a_query)
     execute_fzf(fd_command, fzf_dict, fzf_port)
 end
 
-M.run = function(a_query)
-    call(a_query)
+M.run = function()
+    call("")
+end
+
+M.run_cword = function()
+    local cword = vim.fn.expand('<cword>'):gsub("^%./", "")
+    call(cword)
 end
 
 local function is_gf_accessible(filename)
