@@ -176,9 +176,9 @@ M.run = function()
     call("")
 end
 
-M.run_cword = function()
-    local cword = vim.fn.expand('<cword>'):gsub("^%./", "")
-    call(cword)
+M.run_cfile = function()
+    local cfile = vim.fn.expand('<cfile>'):gsub("^%./", "")
+    call(cfile)
 end
 
 local function is_gf_accessible(filename)

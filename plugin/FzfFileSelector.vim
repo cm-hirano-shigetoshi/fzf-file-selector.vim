@@ -8,7 +8,7 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 "nnoremap <silent> <Plug>selectable-gf :lua require('FzfFileSelector').gf(vim.fn.expand('<cfile>'))<cr>
-nnoremap <silent> <Plug>selectable-gf :lua require('FzfFileSelector').run_cword()<cr>
+nnoremap <silent> <Plug>selectable-gf :lua require('FzfFileSelector').run_cfile()<cr>
 nnoremap <silent> <Plug>fzf-file-selector :lua require('FzfFileSelector').run()<cr>
 
 
